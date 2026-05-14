@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { handleCallback } from '../auth/oauth';
+import { handleCallback, getUserEmail } from '../auth/oauth';
 import { useAuth } from '../auth/AuthContext';
 import { db } from '../db/db';
 
@@ -12,7 +12,7 @@ export function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setRole } = useAuth();
+  const { setEmail, setRole } = useAuth();
   const handled = useRef(false);
 
   useEffect(() => {
@@ -34,6 +34,10 @@ export function AuthCallback() {
 
     handleCallback(code)
       .then(async () => {
+        // Push the email into AuthContext state so Setup/Home can read it immediately
+        const e = getUserEmail();
+        if (e) setEmail(e);
+
         // Check if spreadsheet is already configured
         const idRow = await db.configKv.get('spreadsheetId');
         if (idRow?.value) {

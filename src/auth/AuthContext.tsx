@@ -26,6 +26,8 @@ interface AuthState {
   loading: boolean;
   /** Ensures we have a fresh token before every API call */
   getToken: () => Promise<string>;
+  /** Called by AuthCallback after a successful OAuth token exchange */
+  setEmail: (e: string) => void;
   setRole: (r: Role) => void;
   setSpreadsheetId: (id: string) => void;
   signOut: () => void;
@@ -94,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         spreadsheetId,
         loading,
         getToken,
+        setEmail,
         setRole: handleSetRole,
         setSpreadsheetId: handleSetSpreadsheetId,
         signOut: handleSignOut,
