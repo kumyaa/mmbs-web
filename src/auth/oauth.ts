@@ -31,10 +31,13 @@ const SCOPES = [
 ].join(' ');
 
 // Detect the redirect URI dynamically so local dev + GH Pages both work.
+// Google does NOT allow '#' in redirect URIs, so we use the plain base URL.
+// main.tsx intercepts the returning ?code= and rewrites it into the hash route.
 function redirectUri(): string {
-  const base = window.location.origin + window.location.pathname;
-  // Strip trailing slash; hash router appends #/auth/callback
-  return base.replace(/\/$/, '') + '/#/auth/callback';
+  const { protocol, host, pathname } = window.location;
+  // Ensure trailing slash (GitHub Pages serves at /mmbs-web/)
+  const path = pathname.endsWith('/') ? pathname : pathname + '/';
+  return `${protocol}//${host}${path}`;
 }
 
 const SS_VERIFIER   = 'pkce_verifier';
