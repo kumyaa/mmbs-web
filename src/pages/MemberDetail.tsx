@@ -2,23 +2,28 @@
  * S-08 — Member Detail (Phase B full, Phase A stub).
  */
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../db/db';
+import type { MemberEntity, FyCell } from '../db/schema';
 import { useAuth } from '../auth/AuthContext';
 import { BottomNav } from '../components/BottomNav';
 import { SyncIcon } from '../components/SyncIcon';
+import { FamilyEditModal, type FamilySlot } from '../components/FamilyEditModal';
 import { currentFyLabel } from '../domain/FinancialYear';
-import type { FyCell } from '../db/schema';
+import { memberStore } from '../store/memberStore';
+import { PushQueue } from '../sync/PushQueue';
 
 const CURRENT_FY = currentFyLabel();
 
 export function MemberDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, getToken, spreadsheetId } = useAuth();
 
   const member = useLiveQuery(() => (id ? db.members.get(id) : undefined), [id]);
   const membershipRow = useLiveQuery(() => (id ? db.membershipRows.get(id) : undefined), [id]);
+  const [editingSlot, setEditingSlot] = useState<FamilySlot | null>(null);
 
   if (!member) {
     return (
@@ -41,6 +46,31 @@ export function MemberDetail() {
   });
 
   const canWrite = role !== 'Auditor';
+
+  const saveFamilySlot = async (updated: FamilySlot) => {
+    if (!member) return;
+    const patch: Partial<MemberEntity> = {};
+    const p = `fm${updated.slot}` as 'fm2' | 'fm3' | 'fm4';
+    (patch as Record<string, string>)[`${p}Name`]    = updated.name;
+    (patch as Record<string, string>)[`${p}Rel`]     = updated.relation;
+    (patch as Record<string, string>)[`${p}Mobile`]  = updated.mobile;
+    (patch as Record<string, string>)[`${p}WaGroup`] = updated.waGroup;
+    await memberStore.saveLocalEdit({ ...member, ...patch });
+    if (spreadsheetId) PushQueue.schedule(spreadsheetId, getToken, () => {});
+    setEditingSlot(null);
+  };
+
+  const clearFamilySlot = async (slot: 2 | 3 | 4) => {
+    if (!member) return;
+    const p = `fm${slot}` as 'fm2' | 'fm3' | 'fm4';
+    const patch: Partial<MemberEntity> = {};
+    (patch as Record<string, string>)[`${p}Name`]    = '';
+    (patch as Record<string, string>)[`${p}Rel`]     = '';
+    (patch as Record<string, string>)[`${p}Mobile`]  = '';
+    (patch as Record<string, string>)[`${p}WaGroup`] = '';
+    await memberStore.saveLocalEdit({ ...member, ...patch });
+    if (spreadsheetId) PushQueue.schedule(spreadsheetId, getToken, () => {});
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -123,46 +153,44 @@ export function MemberDetail() {
         </Section>
 
         {/* Family members */}
-        {[
-          { name: member.fm2Name, rel: member.fm2Rel, mobile: member.fm2Mobile, wa: member.fm2WaGroup },
-          { name: member.fm3Name, rel: member.fm3Rel, mobile: member.fm3Mobile, wa: member.fm3WaGroup },
-          { name: member.fm4Name, rel: member.fm4Rel, mobile: member.fm4Mobile, wa: member.fm4WaGroup },
-        ].some((f) => f.name) && (
+        {/* Family members — always show section when canWrite (for adding), or if data exists */}
+        {(canWrite || [member.fm2Name, member.fm3Name, member.fm4Name].some(Boolean)) && (
           <Section title="Family Members">
-            {[
-              { name: member.fm2Name, rel: member.fm2Rel, mobile: member.fm2Mobile, wa: member.fm2WaGroup },
-              { name: member.fm3Name, rel: member.fm3Rel, mobile: member.fm3Mobile, wa: member.fm3WaGroup },
-              { name: member.fm4Name, rel: member.fm4Rel, mobile: member.fm4Mobile, wa: member.fm4WaGroup },
-            ]
-              .filter((f) => f.name)
-              .map((f, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">{f.name}</div>
-                    <div className="text-xs text-gray-500">{f.rel} {f.mobile ? `· ${f.mobile}` : ''}</div>
-                  </div>
-                  {f.mobile && (
-                    <div className="flex gap-2">
-                      <a
-                        href={`tel:${f.mobile}`}
-                        className="text-xs bg-blue-50 text-blue-600 rounded-lg px-2 py-1"
-                      >
-                        Call
-                      </a>
-                      {f.wa === 'Yes' && (
-                        <a
-                          href={`https://wa.me/91${f.mobile.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs bg-green-50 text-green-700 rounded-lg px-2 py-1"
-                        >
-                          WA
-                        </a>
-                      )}
-                    </div>
+            {([
+              { slot: 2 as const, name: member.fm2Name, rel: member.fm2Rel, mobile: member.fm2Mobile, wa: member.fm2WaGroup },
+              { slot: 3 as const, name: member.fm3Name, rel: member.fm3Rel, mobile: member.fm3Mobile, wa: member.fm3WaGroup },
+              { slot: 4 as const, name: member.fm4Name, rel: member.fm4Rel, mobile: member.fm4Mobile, wa: member.fm4WaGroup },
+            ]).map((f) => (
+              <div key={f.slot} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div className="flex-1 min-w-0">
+                  {f.name ? (
+                    <>
+                      <div className="text-sm font-medium text-gray-800">{f.name}</div>
+                      <div className="text-xs text-gray-500">{f.rel}{f.mobile ? ` · ${f.mobile}` : ''}</div>
+                    </>
+                  ) : (
+                    <div className="text-xs text-gray-400 italic">Member {f.slot} — not added</div>
                   )}
                 </div>
-              ))}
+                <div className="flex gap-1.5">
+                  {f.mobile && (
+                    <a href={`tel:${f.mobile}`} className="text-xs bg-blue-50 text-blue-600 rounded-lg px-2 py-1">Call</a>
+                  )}
+                  {f.mobile && f.wa === 'Yes' && (
+                    <a href={`https://wa.me/91${f.mobile.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                      className="text-xs bg-green-50 text-green-700 rounded-lg px-2 py-1">WA</a>
+                  )}
+                  {canWrite && (
+                    <button
+                      onClick={() => setEditingSlot({ slot: f.slot, name: f.name, relation: f.rel, mobile: f.mobile, waGroup: f.wa })}
+                      className="text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-lg px-2 py-1"
+                    >
+                      {f.name ? 'Edit' : '+ Add'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </Section>
         )}
 
@@ -175,6 +203,15 @@ export function MemberDetail() {
 
       <div className="h-20" />
       <BottomNav />
+
+      {editingSlot && (
+        <FamilyEditModal
+          slot={editingSlot}
+          onSave={saveFamilySlot}
+          onClear={clearFamilySlot}
+          onClose={() => setEditingSlot(null)}
+        />
+      )}
     </div>
   );
 }

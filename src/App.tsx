@@ -12,6 +12,8 @@ import { RecordPayment } from './pages/RecordPayment';
 import { TxnList } from './pages/TxnList';
 import { TxnEdit } from './pages/TxnEdit';
 import { ReconUpload } from './pages/ReconUpload';
+import { ReconMatch } from './pages/ReconMatch';
+import { ReconSummary } from './pages/ReconSummary';
 import { Settings } from './pages/Settings';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -48,6 +50,8 @@ export function App() {
       <Route path="/txns/new" element={<RequireAuth><TxnEdit /></RequireAuth>} />
       <Route path="/txns/:id" element={<RequireAuth><TxnEdit /></RequireAuth>} />
       <Route path="/recon" element={<RequireAuth><ReconUpload /></RequireAuth>} />
+      <Route path="/recon/match" element={<RequireAuth><ReconMatch /></RequireAuth>} />
+      <Route path="/recon/summary" element={<RequireAuth><ReconSummary /></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
 
       {/* Default */}
