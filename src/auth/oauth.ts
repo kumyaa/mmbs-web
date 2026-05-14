@@ -17,9 +17,14 @@
 
 import { deriveChallenge, generateVerifier } from './pkce';
 
-// ─── Replace with your Google OAuth Client ID ──────────────────────────────
+// ─── Google OAuth credentials ──────────────────────────────────────────────
+// Client ID is public by design — safe to commit.
+// Client Secret is injected at build time via Vite env (VITE_GOOGLE_CLIENT_SECRET).
+// Set it as a GitHub Actions secret so it never appears in source code.
 export const GOOGLE_CLIENT_ID =
   '55122045980-ma32j6npuirp5urqkr83kj3cibfkt276.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_SECRET =
+  import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string ?? '';
 // ───────────────────────────────────────────────────────────────────────────
 
 const SCOPES = [
@@ -129,6 +134,7 @@ export async function handleCallback(code: string): Promise<string> {
   const body = new URLSearchParams({
     code,
     client_id: GOOGLE_CLIENT_ID,
+    client_secret: GOOGLE_CLIENT_SECRET,
     redirect_uri: redirectUri(),
     grant_type: 'authorization_code',
     code_verifier: verifier,
@@ -176,6 +182,7 @@ export async function ensureToken(): Promise<string> {
 
     const body = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
       grant_type: 'refresh_token',
       refresh_token: refresh,
     });
