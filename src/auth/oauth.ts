@@ -19,7 +19,7 @@ import { deriveChallenge, generateVerifier } from './pkce';
 
 // ─── Replace with your Google OAuth Client ID ──────────────────────────────
 export const GOOGLE_CLIENT_ID =
-  'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+  '55122045980-ma32j6npuirp5urqkr83kj3cibfkt276.apps.googleusercontent.com';
 // ───────────────────────────────────────────────────────────────────────────
 
 const SCOPES = [
