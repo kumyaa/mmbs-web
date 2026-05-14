@@ -91,6 +91,14 @@ export async function fullPull(
   const txnsRows       = await fetchSheet(TRANSACTIONS_RANGE);
   const usersRows      = await fetchSheet(APP_USERS_RANGE);
 
+  console.log('[SyncEngine] Raw row counts — Members:', membersRows.length,
+    '| Membership:', membershipRows.length,
+    '| Transactions:', txnsRows.length,
+    '| AppUsers:', usersRows.length);
+  if (membersRows.length > 0) {
+    console.log('[SyncEngine] Members first 3 rows:', JSON.stringify(membersRows.slice(0, 3)));
+  }
+
   // ── AppUsers ───────────────────────────────────────────────────────────
   onProgress({ phase: 'pulling', message: 'Syncing users…' });
   await db.appUsers.clear();
@@ -101,18 +109,22 @@ export async function fullPull(
   }
 
   // ── Members ────────────────────────────────────────────────────────────
-  onProgress({ phase: 'pulling', message: 'Syncing members…' });
+  onProgress({ phase: 'pulling', message: `Syncing members… (${membersRows.length} rows in sheet)` });
+  let membersSaved = 0;
   for (let i = MEMBERS_DATA_ROW - 1; i < membersRows.length; i++) {
     const row = membersRows[i];
     const sheetRowIndex = i + 1; // 1-based
     const memberId = row[1]?.trim();
     if (!memberId) continue;
+    // Skip header/label rows
+    if (memberId.toLowerCase().includes('member') || memberId.toLowerCase() === 'id') continue;
 
     const incoming = sheetRowToMember(row, sheetRowIndex, sheetModifiedTime);
     const existing = await db.members.get(memberId);
 
     if (!existing) {
       await db.members.put(incoming);
+      membersSaved++;
       continue;
     }
 
@@ -149,11 +161,14 @@ export async function fullPull(
     // No conflict — update from sheet (preserve local edits if PENDING)
     if (existing.syncStatus !== 'PENDING') {
       await db.members.put(incoming);
+      membersSaved++;
     } else {
       // Update sheet row index even if local changes are pending
       await db.members.update(memberId, { sheetRowIndex });
     }
   }
+  console.log(`[SyncEngine] Members saved/updated: ${membersSaved}`);
+  onProgress({ phase: 'pulling', message: `Syncing members… ${membersSaved} loaded` });
 
   // ── Membership Tracker ─────────────────────────────────────────────────
   onProgress({ phase: 'pulling', message: 'Syncing membership fees…' });

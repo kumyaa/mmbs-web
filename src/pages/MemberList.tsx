@@ -9,11 +9,30 @@ import { db } from '../db/db';
 import { BottomNav } from '../components/BottomNav';
 import { SyncIcon } from '../components/SyncIcon';
 import { useAuth } from '../auth/AuthContext';
+import { fullPull } from '../sync/SyncEngine';
+import { useConflicts } from '../sync/ConflictStore';
 
 export function MemberList() {
-  const { role } = useAuth();
+  const { role, getToken, spreadsheetId } = useAuth();
+  const { addConflict } = useConflicts();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+
+  const doSync = async () => {
+    if (!spreadsheetId || syncing) return;
+    setSyncing(true);
+    setSyncMsg('Syncing…');
+    try {
+      await fullPull(spreadsheetId, getToken, (p) => setSyncMsg(p.message), addConflict);
+      setSyncMsg('');
+    } catch (e: unknown) {
+      setSyncMsg('Sync error: ' + (e as Error).message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const members = useLiveQuery(
     () =>
@@ -36,15 +55,28 @@ export function MemberList() {
       <div className="bg-primary-500 text-white px-4 pt-12 pb-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold">Members</h1>
-          {role !== 'Auditor' && (
+          <div className="flex gap-2">
             <button
-              onClick={() => navigate('/members/new')}
-              className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg"
+              onClick={doSync}
+              disabled={syncing}
+              title="Sync from spreadsheet"
+              className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-base disabled:opacity-50"
             >
-              +
+              {syncing ? '…' : '↻'}
             </button>
-          )}
+            {role !== 'Auditor' && (
+              <button
+                onClick={() => navigate('/members/new')}
+                className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg"
+              >
+                +
+              </button>
+            )}
+          </div>
         </div>
+        {syncMsg && (
+          <p className="text-xs text-primary-100 pb-1 truncate">{syncMsg}</p>
+        )}
         <input
           type="search"
           placeholder="Search name, ID or mobile…"
@@ -63,9 +95,13 @@ export function MemberList() {
               {search.trim() ? 'No members match your search.' : 'No members loaded yet.'}
             </p>
             {!search.trim() && (
-              <p className="text-xs text-gray-400 mt-1">
-                Tap the ↻ sync button on the Home screen to load data from the spreadsheet.
-              </p>
+              <button
+                onClick={doSync}
+                disabled={syncing}
+                className="mt-3 bg-primary-500 text-white rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                {syncing ? syncMsg || 'Syncing…' : 'Sync from spreadsheet'}
+              </button>
             )}
           </div>
         )}
