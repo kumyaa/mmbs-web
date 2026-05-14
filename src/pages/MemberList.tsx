@@ -57,7 +57,17 @@ export function MemberList() {
       {/* List */}
       <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
         {members?.length === 0 && (
-          <p className="text-center text-sm text-gray-400 py-12">No members found.</p>
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <p className="text-4xl mb-3">👥</p>
+            <p className="text-sm font-medium text-gray-600 mb-1">
+              {search.trim() ? 'No members match your search.' : 'No members loaded yet.'}
+            </p>
+            {!search.trim() && (
+              <p className="text-xs text-gray-400 mt-1">
+                Tap the ↻ sync button on the Home screen to load data from the spreadsheet.
+              </p>
+            )}
+          </div>
         )}
         {members?.map((m) => (
           <button

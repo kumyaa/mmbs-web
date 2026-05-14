@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { formatDistanceToNow } from 'date-fns';
+import { BottomNav } from '../components/BottomNav';
 
 export function Settings() {
   const { email, role, spreadsheetId, signOut } = useAuth();
@@ -64,6 +65,8 @@ export function Settings() {
 
         <p className="text-xs text-center text-gray-400">MMBS Tracker v0.1.0</p>
       </div>
+      <div className="h-20" />
+      <BottomNav />
     </div>
   );
 }

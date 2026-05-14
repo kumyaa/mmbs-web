@@ -67,17 +67,29 @@ export async function fullPull(
 ): Promise<void> {
   onProgress({ phase: 'pulling', message: 'Reading spreadsheet…' });
 
-  const { valueRanges } = await batchGet(
-    spreadsheetId,
-    [MEMBERS_RANGE, MEMBERSHIP_RANGE, TRANSACTIONS_RANGE, APP_USERS_RANGE],
-    getToken,
-  );
+  // Fetch each sheet separately so a wrong tab name on one sheet
+  // doesn't abort the entire sync. Errors are logged and warned.
+  const fetchSheet = async (range: string): Promise<string[][]> => {
+    try {
+      const { valueRanges } = await batchGet(spreadsheetId, [range], getToken);
+      return valueRanges[0]?.values ?? [];
+    } catch (e) {
+      const tabName = range.split('!')[0];
+      console.warn(`[SyncEngine] Failed to fetch "${tabName}":`, e);
+      onProgress({
+        phase: 'pulling',
+        message: `⚠ Could not read sheet tab "${tabName}" — check exact tab name in the spreadsheet`,
+      });
+      // Small pause so the user can see the warning
+      await new Promise((r) => setTimeout(r, 1200));
+      return [];
+    }
+  };
 
-  const [membersVr, membershipVr, txnsVr, usersVr] = valueRanges;
-  const membersRows  = membersVr.values  ?? [];
-  const membershipRows = membershipVr.values ?? [];
-  const txnsRows     = txnsVr.values     ?? [];
-  const usersRows    = usersVr.values    ?? [];
+  const membersRows    = await fetchSheet(MEMBERS_RANGE);
+  const membershipRows = await fetchSheet(MEMBERSHIP_RANGE);
+  const txnsRows       = await fetchSheet(TRANSACTIONS_RANGE);
+  const usersRows      = await fetchSheet(APP_USERS_RANGE);
 
   // ── AppUsers ───────────────────────────────────────────────────────────
   onProgress({ phase: 'pulling', message: 'Syncing users…' });
