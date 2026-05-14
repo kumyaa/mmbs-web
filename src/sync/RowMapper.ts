@@ -30,8 +30,8 @@ function num(row: string[], i: number): number {
 }
 
 // ── Members (sheet "Members", data from row 4) ─────────────────────────────
-// Column map (PRD §9.1):
-// A=0  RegDate     B=1  MemberId    C=2  PrimaryName   D=3  PrimaryMobile
+// Column map (actual sheet — verified from console log):
+// A=0  MemberId    B=1  RegDate     C=2  PrimaryName   D=3  PrimaryMobile
 // E=4  Email       F=5  Fm2Name     G=6  Fm2Rel        H=7  Fm2Mobile
 // I=8  Fm2WaGroup  J=9  Fm3Name     K=10 Fm3Rel        L=11 Fm3Mobile
 // M=12 Fm3WaGroup  N=13 Fm4Name     O=14 Fm4Rel        P=15 Fm4Mobile
@@ -47,8 +47,8 @@ export function sheetRowToMember(
   lastSheetModifiedTime?: number,
 ): MemberEntity {
   return {
-    memberId:          col(row, 1),
-    regDate:           col(row, 0),
+    memberId:          col(row, 0),
+    regDate:           col(row, 1),
     primaryName:       col(row, 2),
     primaryMobile:     col(row, 3),
     email:             col(row, 4),
@@ -74,7 +74,7 @@ export function sheetRowToMember(
 
 export function memberToSheetRow(m: MemberEntity): string[] {
   return [
-    m.regDate, m.memberId, m.primaryName, m.primaryMobile, m.email,
+    m.memberId, m.regDate, m.primaryName, m.primaryMobile, m.email,
     m.fm2Name, m.fm2Rel, m.fm2Mobile, m.fm2WaGroup,
     m.fm3Name, m.fm3Rel, m.fm3Mobile, m.fm3WaGroup,
     m.fm4Name, m.fm4Rel, m.fm4Mobile, m.fm4WaGroup,

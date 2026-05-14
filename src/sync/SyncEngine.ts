@@ -114,9 +114,9 @@ export async function fullPull(
   for (let i = MEMBERS_DATA_ROW - 1; i < membersRows.length; i++) {
     const row = membersRows[i];
     const sheetRowIndex = i + 1; // 1-based
-    const memberId = row[1]?.trim();
+    const memberId = row[0]?.trim();
     if (!memberId) continue;
-    // Skip header/label rows
+    // Skip header/label rows (e.g. "Member ID", "MEMBER REGISTER")
     if (memberId.toLowerCase().includes('member') || memberId.toLowerCase() === 'id') continue;
 
     const incoming = sheetRowToMember(row, sheetRowIndex, sheetModifiedTime);
