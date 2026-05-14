@@ -24,7 +24,7 @@ import { deriveChallenge, generateVerifier } from './pkce';
 export const GOOGLE_CLIENT_ID =
   '55122045980-ma32j6npuirp5urqkr83kj3cibfkt276.apps.googleusercontent.com';
 export const GOOGLE_CLIENT_SECRET =
-  import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string ?? '';
+  import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? '';
 // ───────────────────────────────────────────────────────────────────────────
 
 const SCOPES = [
